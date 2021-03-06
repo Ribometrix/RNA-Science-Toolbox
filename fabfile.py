@@ -59,7 +59,10 @@ def website():
         local("sudo ln -sf `which nodejs` /usr/bin/node")
 
     print(green("Installing Bower..."))
-    local("sudo npm install -g bower")
+    if sys.platform != "darwin":
+        local("sudo npm install -g bower")
+    else:
+        local("conda install -c javascript bower")
 
     print(green("Installing the website..."))
     local('cd website ; bower --config.interactive=false install')

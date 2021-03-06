@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-import ujson, sys, datetime, os, random, string, json, commands
+import ujson, sys, datetime, os, random, string, json
+import subprocess as commands
 
 from pyrna.features import RNA
 from pyrna.db import Rfam
@@ -39,7 +40,7 @@ def is_registered_user(secret_key):
 def wsSend(message):
     for ws in websockets:
         if not ws.ws_connection.stream.socket:
-            print "Web socket does not exist anymore!!!"
+            print ("Web socket does not exist anymore!!!")
             websockets.remove(ws)
         else:
             ws.write_message(message)
@@ -136,9 +137,9 @@ class Logout(UserAccount):
     def get(self):
         user = webserver_db['users'].find_one({'login': self.get_secure_cookie("login")})
         for tool in user['external tools linked']:
-            print external_tools_2_websockets.has_key(tool['id'])
-            print external_tools_2_websockets
-            print tool['id']
+            print (external_tools_2_websockets.has_key(tool['id']))
+            print (external_tools_2_websockets)
+            print (tool['id'])
             if external_tools_2_websockets.has_key(tool['id']):
                 message = {}
                 message['header'] = "super"
@@ -661,7 +662,7 @@ class WebSocket(tornado.websocket.WebSocketHandler):
     def open(self, *args):
         if self not in websockets:
             websockets.append(self)
-        print "New client connected"
+        print ("New client connected")
 
     def on_message(self, message):
         message = ujson.loads(message)
@@ -717,7 +718,7 @@ class WebSocket(tornado.websocket.WebSocketHandler):
             db = mongodb['logs']
             now = datetime.datetime.now()
             data = []
-            for i in xrange(1, 61):
+            for i in range(1, 61):
                 counts = {'y': "-%im"%
                 i}
                 time_range = {
@@ -750,7 +751,7 @@ class WebSocket(tornado.websocket.WebSocketHandler):
             junction_diameter = 20
             rfam = Rfam(use_website = True)
             aligned_rnas, species, consensus2D = rfam.get_entry(rfam_id = message['rfam_id'], nse_labels = 0)
-            print consensus2D
+            print (consensus2D)
             structural_alignment = to_clustalw(consensus2D, aligned_rnas)
             booquet_json = consensus2d_to_booquet(structural_alignment, junction_diameter = junction_diameter)
             answer = {'header': 'init booquet'}
@@ -765,7 +766,7 @@ class WebSocket(tornado.websocket.WebSocketHandler):
             if ws == self:
                 del external_tools_2_websockets[external_tool]
                 break
-        print "Client disconnected"
+        print ("Client disconnected")
 
 class Application(tornado.web.Application):
     def __init__(self):
@@ -808,18 +809,18 @@ class Application(tornado.web.Application):
 if __name__ == '__main__':
     dir = os.path.dirname(os.path.realpath(__file__))
     if not os.path.exists(dir+'/../website/bower_components'):
-        print 'It seems that you did not install the website dependencies.'
-        print 'To do so, from the RNA Science Toolbox directory, type: fab website'
+        print ('It seems that you did not install the website dependencies.')
+        print ('To do so, from the RNA Science Toolbox directory, type: fab website')
         sys.exit()
     mongodb_host = "localhost"
     mongodb_port = 27017
 
     if "--help" in sys.argv:
-        print "Usage: ./server.py [-h x] [-p x] [-mh x] [-mp x]  "
-        print '- h: the web server hostname (default: localhost)\n'
-        print '- p: the web server port (default: 8080)\n'
-        print '- mh: the mongodb host (default: localhost)\n'
-        print '- mp: the mongodb port (default: 27017)\n'
+        print ("Usage: ./server.py [-h x] [-p x] [-mh x] [-mp x]  ")
+        print ('- h: the web server hostname (default: localhost)\n')
+        print ('- p: the web server port (default: 8080)\n')
+        print ('- mh: the mongodb host (default: localhost)\n')
+        print ('- mp: the mongodb port (default: 27017)\n')
         sys.exit(-1)
 
     if "-h" in sys.argv:
@@ -834,15 +835,15 @@ if __name__ == '__main__':
         mongodb = MongoClient(mongodb_host, mongodb_port)
         logs_db = mongodb['logs']
         webserver_db = mongodb['webserver']
-    except Exception, e:
-        print '\033[91mI cannot connect any Mongodb instance hosted at %s:%i\033[0m'%(mongodb_host, mongodb_port)
-        print 'To modify the parameters for the Mongodb instance, copy and edit the file conf/pyrna.json.'
+    except Exception as e:
+        print ('\033[91mI cannot connect any Mongodb instance hosted at %s:%i\033[0m'%(mongodb_host, mongodb_port))
+        print ('To modify the parameters for the Mongodb instance, copy and edit the file conf/pyrna.json.')
         sys.exit(-1)
 
     app = Application()
     server = tornado.httpserver.HTTPServer(app)
     server.listen(webserver_port)
-    print "\033[92mYour webserver is now accessible at http://%s:%i/\033[0m"%(hostname, webserver_port)
+    print ("\033[92mYour webserver is now accessible at http://%s:%i/\033[0m"%(hostname, webserver_port))
 
     main_loop = tornado.ioloop.IOLoop.instance()
     main_loop.start()
