@@ -1,12 +1,17 @@
-import os, commands, re, shutil, sys, urllib, subprocess, time, fcntl, urllib, urllib2
-from string import maketrans
+import os, re, shutil, sys, subprocess, time, fcntl
+import subprocess as commands
 from pandas import DataFrame
-import parsers, utils
-from features import RNA, SecondaryStructure, TertiaryStructure
-from parsers import base_pairs_to_secondary_structure, parse_bn, to_fasta, to_pdb
+from pyrna import parsers, utils
+from pyrna.features import RNA, SecondaryStructure, TertiaryStructure
+from pyrna.parsers import base_pairs_to_secondary_structure, parse_bn, to_fasta, to_pdb
 from distutils.spawn import find_executable
 from pyrna.utils import check_docker_image
 import docker
+
+import urllib.request, urllib.parse, urllib.error, urllib.request, urllib.error, urllib.parse
+
+def maketrans(*arg,**kw):
+    return str.maketrans(*args,**kw)
 
 def get_api_key(rest_server):
     response = urllib.urlopen("http://%s/api/get_key"%rest_server)
@@ -31,8 +36,8 @@ class Tool:
     def submit(self, tool_name, parameters):
         parameters['api_key'] = self.api_key
         parameters = urllib.urlencode(parameters)
-        req = urllib2.Request("http://%s/api/computations/%s"%(self.rest_server, tool_name), parameters)
-        response = urllib2.urlopen(req)
+        req = urllib.request.Request("http://%s/api/computations/%s"%(self.rest_server, tool_name), parameters)
+        response = urllib.request.urlopen(req)
         output = str(response.read())
         response.close()
         return output
@@ -52,14 +57,14 @@ class Tool:
         if not uri.endswith("/"):
             file_name = self.cache_dir+'/'+uri.split('/')[-1]
         else:
-            print "Error: your URI should not end with the character '/'"
+            print ("Error: your URI should not end with the character '/'")
             sys.exit(1)
         if uri.startswith("https://") or uri.startswith("http://"):
             urllib.urlretrieve(uri, file_name)
         elif uri.startswith("file://"):
             shutil.copy(uri.split('file://')[1], self.cache_dir)
         else:
-            print "Error: your URI must start with 'file://', 'http://' or 'https://'" #if the given path start with /Users/, URI must start with file:///Users/
+            print ("Error: your URI must start with 'file://', 'http://' or 'https://'") #if the given path start with /Users/, URI must start with file:///Users/
             sys.exit(1)
         return file_name
 
@@ -459,7 +464,7 @@ class Bowtie2(Tool):
                     'genomeName': genomeName,
                     'genomicStrand': aligned_read['genomicStrand']
                 })
-        print "%i reads found, %i reads aligned..."%(total_reads, total_aligned_reads)
+        print ("%i reads found, %i reads aligned..."%(total_reads, total_aligned_reads))
         return DataFrame(reads)
 
     def align(self, target_molecules, fastq_file, parsing = False, user_defined_options=[]):
@@ -494,9 +499,9 @@ class Bowtie2(Tool):
         elif not os.path.exists(self.index_path+".1.bt2"):
             self.build_index(target_molecules)
 
-        print "Reads alignment..."
+        print ("Reads alignment...")
         commands.getoutput("docker run -v %s:/data fjossinet/rnaseq bowtie2 %s -x /data/%s -q \"/data/%s\" -S /data/%s"%(self.cache_dir, ' '.join(user_defined_options), self.index_path, fastq_file, result_file))
-        print "SAM file %s produced successfully: "%result_file
+        print ("SAM file %s produced successfully: "%result_file)
 
         if not parsing:
             return result_file
@@ -515,7 +520,7 @@ class Bowtie2(Tool):
         --------
         The full path to the directory containing the index plus the prefix of the index files
         """
-        print "Build index..."
+        print ("Build index...")
         if not self.index_path:
             random_name = utils.generate_random_name(7)
             self.index_path = random_name
@@ -524,14 +529,14 @@ class Bowtie2(Tool):
             fasta_file.write(to_fasta(target_molecules))
             fasta_file.close()
             commands.getoutput("docker run -v %s:/data fjossinet/rnaseq bowtie2-build /data/%s /data/%s"%(self.cache_dir, fasta_file_name, self.index_path))
-            print "Index files produced successfully: %s"%(self.cache_dir+'/'+self.index_path)
+            print ("Index files produced successfully: %s"%(self.cache_dir+'/'+self.index_path))
         else:
             fasta_file_name = self.index_path+".fa"
             fasta_file = open(self.cache_dir+'/'+fasta_file_name, 'w')
             fasta_file.write(to_fasta(target_molecules))
             fasta_file.close()
             commands.getoutput("docker run -v %s:/data fjossinet/rnaseq bowtie2-build /data/%s /data/%s"%(self.cache_dir, fasta_file_name, self.index_path))
-            print "Index files produced successfully: %s"%(self.cache_dir+'/'+self.index_path)
+            print ("Index files produced successfully: %s"%(self.cache_dir+'/'+self.index_path))
 
         return self.index_path
 
@@ -623,7 +628,7 @@ class Cmalign(Tool):
         if not stockholm_content:
             try:
                 stockholm_content = rfam.get_entry(rfam_id, format='stockholm')
-            except Exception, e:
+            except Exception as e:
                 raise e
         if rfam_id:
             stockholm_file = open("%s/%s.stk"%(self.cache_dir,rfam_id), 'w')
@@ -976,8 +981,8 @@ class Contrafold(Tool):
                 'api_key': self.api_key
             }
             data = urllib.urlencode(values)
-            req = urllib2.Request("http://%s/api/computations/contrafold"%self.rest_server, data)
-            response = urllib2.urlopen(req)
+            req = urllib.request.Request("http://%s/api/computations/contrafold"%self.rest_server, data)
+            response = urllib.request.urlopen(req)
             output = str(response.read())
             response.close()
         else:
@@ -1114,11 +1119,11 @@ class Cufflinks(Tool):
         annotation_list.sort(self.__cmp)
 
         if intron_list:
-            print "Total number of introns in the database %s: %i"%(db_name, len(intron_list))
+            print ("Total number of introns in the database %s: %i"%(db_name, len(intron_list)))
             intron_list.sort(self.__cmp)
             intron_counter = 0
         else:
-            print "No intron in the database %s"%db_name
+            print ("No intron in the database %s"%db_name)
 
         ##GFF3 formatting
         gene = -1
@@ -1149,7 +1154,7 @@ class Cufflinks(Tool):
                                 intron_list.pop(i-j)
                                 j += 1
                                 if not intron_list:
-                                    print "Processing of all intron data (%i introns): done"%intron_counter
+                                    print ("Processing of all intron data (%i introns): done"%intron_counter)
                 if retained_introns:
                     exon_coord = []
                     for i in range(0, len(retained_introns)):
@@ -1182,7 +1187,7 @@ class Cufflinks(Tool):
                             exon1_len = exon1_len + exon2_len
                         if i == len(exon_coord)-1:
                             if exon1_len%3 != 0:
-                                print "Warning: the RNA on genome %s at coordinates [%i,%i] has a length (%i) that is not a multiple of 3"%(annotation['genomeName'],annotation['start'],annotation['end'],exon1_len)
+                                print ("Warning: the RNA on genome %s at coordinates [%i,%i] has a length (%i) that is not a multiple of 3"%(annotation['genomeName'],annotation['start'],annotation['end'],exon1_len))
                                 sys.exit()
                         data += "%s\t%s\tCDS\t%i\t%i\t%s\t%s\t%i\tID=cds%s;Parent=%s\n"%(annotation['genomeName'], annotation['source'], coordinates[0], coordinates[1], annotation['score'], annotation['genomicStrand'], phase, cds, rna_parent)
                 else:
@@ -1210,7 +1215,7 @@ class Cufflinks(Tool):
         fh = open("%s/isoforms.fpkm_tracking"%self.cache_dir, 'r')
         lines = fh.readlines()
         transcripts = []
-        print "Total number of genes in the Cufflinks output (file isoforms.fpkm_tracking): %i"%len(lines[1:])
+        print ("Total number of genes in the Cufflinks output (file isoforms.fpkm_tracking): %i"%len(lines[1:]))
         for line in lines[1:]:#first line contains the description of columns
             tokens = line[:-1].split('\t')
             locus = tokens[6].split(':')
@@ -1286,7 +1291,7 @@ class Gmorse(Tool):
             self.find_executable("gmorse")
 
     def extract_unmapped_reads(self, aligned_reads_file, fastq_file):
-        print "extractNonMappedReads %s %s"%(aligned_reads_file, fastq_file)
+        print ("extractNonMappedReads %s %s"%(aligned_reads_file, fastq_file))
         output = commands.getoutput("extractNonMappedReads %s %s"%(aligned_reads_file, fastq_file))
         unmapped_reads_file = self.cache_dir+'/unmapped_reads.fa'
         with open(unmapped_reads_file, 'w') as f:
@@ -1294,7 +1299,7 @@ class Gmorse(Tool):
         return unmapped_reads_file
 
     def calculate_depth_coverage(self, aligned_reads_file):
-        print "coverage %s"%(aligned_reads_file)
+        print ("coverage %s"%(aligned_reads_file))
         output = commands.getoutput("coverage %s"%(aligned_reads_file))
         depth_coverage_file = self.cache_dir+'/depth_coverage'
         with open(depth_coverage_file, 'w') as f:
@@ -1302,7 +1307,7 @@ class Gmorse(Tool):
         return depth_coverage_file
 
     def build_covtigs(self, depth_coverage_file, depth_treshold):
-        print "build_covtigs %s %i"%(depth_coverage_file, depth_treshold)
+        print ("build_covtigs %s %i"%(depth_coverage_file, depth_treshold))
         output = commands.getoutput("build_covtigs %s %i"%(depth_coverage_file, depth_treshold))
         covtigs_file = self.cache_dir+'/covtigs'
         with open(covtigs_file, 'w') as f:
@@ -1316,7 +1321,7 @@ class Gmorse(Tool):
         validated_junctions = self.cache_dir+'/validated_junctions'
         with open(scaffolds_file, 'w') as f:
             f.write (to_fasta(target_molecules))
-        print "gmorse -r %s -c %s -f %s -G %s -C %s -J %s"%(unmapped_reads_file, covtigs_file, scaffolds_file, output_gene_models, extended_covtigs, validated_junctions)
+        print ("gmorse -r %s -c %s -f %s -G %s -C %s -J %s"%(unmapped_reads_file, covtigs_file, scaffolds_file, output_gene_models, extended_covtigs, validated_junctions))
         commands.getoutput("gmorse -r %s -c %s -f %s -G %s -C %s -J %s"%(unmapped_reads_file, covtigs_file, scaffolds_file, output_gene_models, extended_covtigs, validated_junctions))
         o = open(output_gene_models)
         model = o.read()
@@ -1535,7 +1540,7 @@ class Rnafold(Tool):
         else:
             if bp_probabilities:
                 probabilities = []
-                for i in xrange(0, len(molecule.sequence)):
+                for i in range(0, len(molecule.sequence)):
                     probabilities.append(0)
                 for line in output.split('\n'):
                     tokens = line.split(' ')
@@ -1543,7 +1548,7 @@ class Rnafold(Tool):
                         probabilities[int(tokens[0])-1] = probabilities[int(tokens[0])-1]+float(tokens[2])*float(tokens[2])
                         probabilities[int(tokens[1])-1] = probabilities[int(tokens[1])-1]+float(tokens[2])*float(tokens[2])
                 result = []
-                for i in xrange(0, len(molecule.sequence)):
+                for i in range(0, len(molecule.sequence)):
                     result.append({'position':i+1, 'residue': molecule.sequence[i], 'probability': probabilities[i] })
                 return DataFrame(result, columns = ['position', 'residue', 'probability'])
             else:
@@ -1802,8 +1807,8 @@ class Rnaplot(Tool):
                 'api_key': self.api_key
             }
             data = urllib.urlencode(values)
-            req = urllib2.Request("http://%s/api/computations/rnaplot"%self.rest_server, data)
-            response = urllib2.urlopen(req)
+            req = urllib.request.Request("http://%s/api/computations/rnaplot"%self.rest_server, data)
+            response = urllib.request.urlopen(req)
             output = str(response.read())
             response.close()
         else:
@@ -1901,8 +1906,8 @@ class Rnaview(Tool):
                 'api_key': self.api_key
             }
             data = urllib.urlencode(values)
-            req = urllib2.Request("http://%s/api/computations/rnaview"%self.rest_server, data)
-            response = urllib2.urlopen(req)
+            req = urllib.request.Request("http://%s/api/computations/rnaview"%self.rest_server, data)
+            response = urllib.request.urlopen(req)
             xml_content = str(response.read())
             response.close()
         else:
@@ -2068,13 +2073,13 @@ class Samtools(Tool):
         path = os.path.realpath(self.sam_file).split('.sam')[0]
         self.run(["view", "-bS %s"%self.sam_file, "> %s.bam"%path])
         #commands.getoutput("samtools view -bS %s > %s.bam"%(self.sam_file, path))
-        print "BAM file done"
+        print ("BAM file done")
         self.run(["sort", "%s.bam"%path, "%s.sorted"%path])
         #commands.getoutput("samtools sort %s.bam %s.sorted"%(path, path))
-        print "Sorted BAM file done"
+        print ("Sorted BAM file done")
         self.run(["index", "%s.sorted.bam"%path])
         #commands.getoutput("samtools index %s.sorted.bam"%path)
-        print "Indexed BAM file done"
+        print ("Indexed BAM file done")
         return "%s.sorted.bam"%path
 
     def count(self, chromosome_name, start, end, restrict_to_plus_strand = False, restrict_to_minus_strand = False):
@@ -2485,8 +2490,8 @@ class TrnaScanSE(Tool):
                         hit['target_positions'] = target_positions[::-1]
                         hit['sequence'] = target_molecule.get_complement()[hit['target_positions'][0]:hit['target_positions'][1]][::-1]
                     else:
-                        print "Error: hit with incorrect target positions"
-                        print "##########\n" + line + "\n##########"
+                        print ("Error: hit with incorrect target positions")
+                        print ("##########\n" + line + "\n##########")
                     hits.append(hit)
         target_molecule = None
         return DataFrame(hits)
@@ -2526,7 +2531,7 @@ class Tophat2(Bowtie2):
         elif not os.path.exists(bowtie2_index+".1.bt2"):
             bowtie2_index = Bowtie2(cache_dir = self.cache_dir, index_path = bowtie2_index).build_index(target_molecules)
 
-        print "Reads alignment..."
+        print ("Reads alignment...")
         self.docker_client.containers.run("fjossinet/rnaseq", "tophat2 %s %s -o /data/ /data/%s /data/%s"%(' '.join(user_defined_options), "--no-convert-bam" if no_convert_bam else "", bowtie2_index, fastq_file), volumes={self.cache_dir: {'bind': '/data', 'mode': 'rw'}})
 
         result_file = None

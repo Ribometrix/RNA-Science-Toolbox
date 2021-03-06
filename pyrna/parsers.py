@@ -206,17 +206,17 @@ def consensus2d_to_booquet(structural_alignment, junction_diameter = 20):
     base_pairs_dataframe = None
     aligned_rnas = None
 
-    print structural_alignment
+    print (structural_alignment)
 
     aligned_rnas, base_pairs_dataframe = parse_clustalw(structural_alignment)
-    print aligned_rnas, base_pairs_dataframe
+    print (aligned_rnas, base_pairs_dataframe)
     ss_object = base_pairs_to_secondary_structure(aligned_rnas[0], base_pairs_dataframe)
 
     if ss_object:
         ss_object.find_junctions()
 
         for helix in ss_object.helices:
-            print helix['location']
+            print (helix['location'])
             sizes = []
             descriptions = []
             for aligned_rna in aligned_rnas:

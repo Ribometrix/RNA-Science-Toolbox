@@ -1,8 +1,10 @@
-import uuid, string, random, datetime, difflib,commands
+import uuid, string, random, datetime, difflib
+import subprocess as commands
 import math, re
-from features import RNA, DNA
+from pyrna.features import RNA, DNA
 from bson.objectid import ObjectId
 from distutils.spawn import find_executable
+from operator import itemgetter
 
 def check_docker_image(image_name):
     if not find_executable('docker'):
@@ -77,7 +79,7 @@ def cluster_genomic_annotations(genomic_annotations, threshold = 1, fill_cluster
         'genomic_annotations': [first_genomic_annotation]
     }
 
-    for i in xrange(1, len(sorted_genomic_annotations)):
+    for i in range(1, len(sorted_genomic_annotations)):
         genomic_annotation = sorted_genomic_annotations[i]
         if genomic_annotation['genomicStart'] <= cluster['genomicEnd']:
             cluster['annotations_count'] += 1
@@ -143,7 +145,7 @@ def get_time(uuid1):
     uuid1: the uuid1 as a string
     """
     t = uuid.UUID(uuid1)
-    return datetime.datetime.fromtimestamp((t.time - 0x01b21dd213814000L) * 100 / 1e9)
+    return datetime.datetime.fromtimestamp((t.time - 0x01b21dd213814000) * 100 / 1e9)
 
 def chunks(l, n):
     """

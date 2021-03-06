@@ -37,12 +37,12 @@ def import_3Ds(db_host = 'localhost', db_port = 27017, rna3dhub = False, canonic
     <containsHybrid>N</containsHybrid>
   </orgPdbQuery>"""
         pdb_ids = pdb.query(query)
-        print "%i 3Ds to process"%len(pdb_ids)
+        print("%i 3Ds to process"%len(pdb_ids))
 
         for pdb_id in pdb_ids:
             if db['tertiaryStructures'].find_one({'source':"db:pdb:%s"%pdb_id}):
                 continue
-            print "Recover %s"%pdb_id
+            print("Recover %s"%pdb_id)
             for ts in parsers.parse_pdb(pdb.get_entry(pdb_id)):
                 try:
                     ss = None
@@ -50,21 +50,21 @@ def import_3Ds(db_host = 'localhost', db_port = 27017, rna3dhub = False, canonic
                         ss, ts = rnaview.annotate(ts, canonical_only = canonical_only)
                     save(db, ss, ts, pdb_id, limit)
 
-                except Exception, e:
-                    print e
-                    print "No annotation for %s"%pdb_id
+                except Exception as e:
+                    print(e)
+                    print ("No annotation for %s"%pdb_id)
                     save(db, None, ts, pdb_id, limit)
     else:
         pdb = PDB()
         rna3dHub = RNA3DHub()
         clusters = rna3dHub.get_clusters()
-        print "%i 3Ds to process"%len(clusters)
+        print ("%i 3Ds to process"%len(clusters))
 
         for cluster in clusters['pdb-ids']:
             pdb_id = cluster[0].split('|')[0]
             if db['tertiaryStructures'].find_one({'source':"db:pdb:%s"%pdb_id}):
                 continue
-            print "Recover %s"%pdb_id #we use the first pdb_id in the list of ids making a cluster
+            print ("Recover %s"%pdb_id) #we use the first pdb_id in the list of ids making a cluster
             for ts in parsers.parse_pdb(pdb.get_entry(pdb_id)):
                 try:
                     ss = None
@@ -72,14 +72,14 @@ def import_3Ds(db_host = 'localhost', db_port = 27017, rna3dhub = False, canonic
                         ss, ts = rnaview.annotate(ts, canonical_only = canonical_only)
                     save(db, ss, ts, pdb_id, limit)
 
-                except Exception, e:
-                    print e
-                    print "No annotation for %s"%pdb_id
+                except Exception as e:
+                    print (e)
+                    print ("No annotation for %s"%pdb_id)
                     save(db, None, ts, pdb_id, limit)
 
 def save(db, secondary_structure, tertiary_structure, pdbId, limit):
     if db['junctions'].count() >= limit:
-        print "Limit of %i junctions reached"%limit
+        print ("Limit of %i junctions reached"%limit)
         sys.exit()
 
     tertiary_structure.source="db:pdb:%s"%pdbId
@@ -243,13 +243,13 @@ if __name__ == '__main__':
     limit = 5000
 
     if "-h" in sys.argv:
-        print "Usage: ./import_3Ds.py [-p x] [-mh x] [-mp x] [-l x] [-rna3dhub] [-canonical_only] [-annotate]"
-        print '- mh: the mongodb host (default: localhost)\n'
-        print '- mp: the mongodb port (default: 27017)\n'
-        print '- l: limit of junctions to be stored (default: 5000)\n'
-        print '- rna3dhub: use the 3D structures from the non-redundant set\n'
-        print '- canonical_only: a secondary structure is made with canonical base-pairs only'
-        print '- annotate: annotate each 3D structure imported'
+        print ("Usage: ./import_3Ds.py [-p x] [-mh x] [-mp x] [-l x] [-rna3dhub] [-canonical_only] [-annotate]")
+        print ('- mh: the mongodb host (default: localhost)\n')
+        print ('- mp: the mongodb port (default: 27017)\n')
+        print ('- l: limit of junctions to be stored (default: 5000)\n')
+        print ('- rna3dhub: use the 3D structures from the non-redundant set\n')
+        print ('- canonical_only: a secondary structure is made with canonical base-pairs only')
+        print ('- annotate: annotate each 3D structure imported')
         sys.exit(-1)
 
     if "-mh" in sys.argv:

@@ -44,7 +44,7 @@ class Location:
             self.add_block(Block(start, end))
         elif single_positions:
             single_positions.sort()
-            for k, g in groupby(enumerate(single_positions), lambda (i,x):i-x):
+            for k, g in groupby(enumerate(single_positions), lambda i,x :i-x):
                 _range = map(itemgetter(1), g)
                 self.blocks.append(Block(min(_range), max(_range)))
         elif nested_lists:
@@ -107,7 +107,7 @@ class Location:
         """
         single_positions = []
         for block in self.blocks:
-            single_positions += xrange(block.start, block.end+1)
+            single_positions += range(block.start, block.end+1)
         return single_positions
 
     def has_position(self, position):
@@ -276,7 +276,7 @@ class SecondaryStructure:
         from numpy import mean
         enclosed_stem_loops = []
         if verbose:
-            print "walking helix", helix['location']
+            print ("walking helix", helix['location'])
         #do we have a >= 3-way junction linked to this helix?
         next_junction = None
         for junction in self.junctions:
@@ -284,14 +284,14 @@ class SecondaryStructure:
             if len(junction_location) >= 3 and helix['location'][0][-1] == junction_location[0][0] :
                 next_junction = junction
                 if verbose:
-                    print "linked to >=3 junction",junction_location
+                    print ("linked to >=3 junction",junction_location)
                 #the occupancy will be the number of residues on the largest side
                 junction_occupancy = mean([junction_location[-1][-1]-junction_location[-1][0]+1, junction_location[0][-1]-junction_location[0][0]+1])-1
                 for i in range(len(junction_location)-1):
                     for h in self.helices: #next helices in junction
                         if h['location'][0][0] == junction_location[i][-1]:
                             if verbose:
-                                print "next helix in junction is helix", h['location']
+                                print ("next helix in junction is helix", h['location'])
                             self.__walk(h, x_coords, current_y-(helix['location'][0][-1]-helix['location'][0][0])*self.__residue_occupancy-1.5*self.__junction_diameter, verbose)
                     for stem_loop in self.stem_loops: #this helix will lead to which stem loops?
                         if stem_loop['location'][0][0] >= junction_location[i][-1] and stem_loop['location'][-1][-1] <= junction_location[i+1][0]:
@@ -299,13 +299,13 @@ class SecondaryStructure:
             elif len(junction_location) == 2 and helix['location'][0][-1] == junction_location[0][0]:
                 next_junction = junction
                 if verbose:
-                    print "linked to 2-way junction", junction_location
+                    print ("linked to 2-way junction", junction_location)
                 #the occupancy will be the number of residues on the largest side
                 junction_occupancy = mean([junction_location[-1][-1]-junction_location[-1][0]+1, junction_location[0][-1]-junction_location[0][0]+1])-1
                 for h in self.helices:
                     if h['location'][0][0] == junction_location[0][-1]:
                         if verbose:
-                            print "next helix in junction is helix", h['location']
+                            print ("next helix in junction is helix", h['location'])
                         self.__walk(h, x_coords, current_y-(helix['location'][0][-1]-helix['location'][0][0])*self.__residue_occupancy-1.5*self.__junction_diameter, verbose)
                 for stem_loop in self.stem_loops: #this helix will lead to which stem loops?
                     if stem_loop['location'][0][0] >= junction_location[0][0] and stem_loop['location'][-1][-1] <= junction_location[-1][-1]:
@@ -313,7 +313,7 @@ class SecondaryStructure:
             elif len(junction_location) == 1 and helix['location'][0][-1] == junction_location[0][0]:
                 next_junction = junction
                 if verbose:
-                    print "linked to apical loop", junction_location
+                    print ("linked to apical loop", junction_location)
         if not len(enclosed_stem_loops): #there was no junction linked to this helix, so it should be in a stem-loop
             for stem_loop in self.stem_loops:
                 if helix['location'][0][0] >= stem_loop['location'][0][0] and helix['location'][-1][-1] <= stem_loop['location'][-1][-1]:
@@ -324,22 +324,22 @@ class SecondaryStructure:
         m = mean(_x_coords)
         helix['coords'] = [[m, current_y], [m, current_y-(helix['location'][0][-1]-helix['location'][0][0])*self.__residue_occupancy]]
         if verbose:
-            print "helix", helix['location']
-            print "coords", helix['coords']
+            print ("helix", helix['location'])
+            print ("coords", helix['coords'])
         next_junction['coords'] = [[m, helix['coords'][-1][-1]-self.__junction_diameter/2-5]]
         if verbose:
-            print "junction", next_junction['location']
-            print "coords", next_junction['coords']
+            print ("junction", next_junction['location'])
+            print ("coords", next_junction['coords'])
 
     def compute_plot(self, step = 25, residue_occupancy = 5, junction_diameter = 15, verbose = False):
         if not self.stem_loops:
             self.find_stem_loops()
         self.helices = sorted(self.helices, key=lambda x: x['location'][0][0])
         if verbose:
-            print len(self.helices), "helices"
-            print len(self.stem_loops), "stem-loops"
-            print len(self.single_strands), "single-strands"
-            print len(self.junctions), "junctions"
+            print (len(self.helices), "helices")
+            print (len(self.stem_loops), "stem-loops")
+            print (len(self.single_strands), "single-strands")
+            print (len(self.junctions), "junctions")
         self.__step = step
         self.__residue_occupancy = residue_occupancy
         self.__junction_diameter = junction_diameter
@@ -347,11 +347,11 @@ class SecondaryStructure:
             raise Exception("Your secondary structure contains no helices!!")
         x = 0
         if verbose:
-            print "\nStem-loops placement\n"
+            print ("\nStem-loops placement\n")
         x_coords = []
         if verbose:
-            print "stem loop", self.stem_loops[0]['location']
-            print "x:", x
+            print ("stem loop", self.stem_loops[0]['location'])
+            print ("x:", x)
         x_coords.append(x)
         for i in range(0, len(self.stem_loops)-1):
             before = self.stem_loops[i]['location'][-1][-1]
@@ -365,8 +365,8 @@ class SecondaryStructure:
                             total_residues += single_strand_location[1]-single_strand_location[0]+1
                             total_junctions += 1
             if verbose:
-                print "total residues", total_residues
-                print "total junctions", total_junctions
+                print ("total residues", total_residues)
+                print ("total junctions", total_junctions)
             if total_junctions == 0: #we have two stem-loops linked with no junctions. ___||___||___
                  l = (after-before+1)*self.__residue_occupancy+self.__junction_diameter
                  if l > 2*self.__junction_diameter:
@@ -375,12 +375,12 @@ class SecondaryStructure:
             else:
                 x += total_junctions*self.__step
             if verbose:
-                print "stem loop", self.stem_loops[i+1]['location']
-                print "x:", x
+                print ("stem loop", self.stem_loops[i+1]['location'])
+                print ("x:", x)
             x_coords.append(x)
 
         if verbose:
-            print "\nHelices placement\n"
+            print ("\nHelices placement\n")
         helix = self.helices[0]
         currentPos = helix['location'][-1][-1]
         current_y = 200
@@ -388,7 +388,7 @@ class SecondaryStructure:
         while currentPos <= len(self.rna):
             currentPos +=1
             if verbose:
-                print "currentPos", currentPos
+                print ("currentPos", currentPos)
             for helix in self.helices:
                 if currentPos == helix['location'][0][0]:
                     current_y = 200
@@ -405,7 +405,7 @@ class SecondaryStructure:
 
         for single_strand in single_strands_not_in_junctions:
             if verbose:
-                print "single strand not in a junction", single_strand['location']
+                print ("single strand not in a junction", single_strand['location'])
             if single_strand['location'][0] == 1:
                 for helix in self.helices:
                     if helix['location'][0][0] == single_strand['location'][-1]+1:
@@ -569,12 +569,12 @@ class SecondaryStructure:
         while currentPos <= len(self.rna):
             currentPos +=1
             if verbose:
-                print "currentPos", currentPos
+                print ("currentPos", currentPos)
             for helix in self.helices:
                 if currentPos == helix['location'][0][0]:
                     if previous_helix['location'][-1][-1] +1 == helix['location'][0][0]:
                         if verbose:
-                            print "directly linked helices", previous_helix['location'] , helix['location']
+                            print ("directly linked helices", previous_helix['location'] , helix['location'])
                         directly_linked_helices_d3 += """svg.append("line")
                                         .style("stroke-linecap", "round")
                                         .style("stroke", "grey")

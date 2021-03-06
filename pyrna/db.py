@@ -1,7 +1,7 @@
-import os, shutil, subprocess, re, urllib, urllib2
+import os, shutil, subprocess, re, urllib.request, urllib.parse, urllib.error, urllib.request, urllib.error, urllib.parse
 from pandas import DataFrame
 from pyrna.features import RNA
-import parsers, utils
+from . import parsers, utils
 from pymongo import MongoClient
 
 class charnDB:
@@ -58,7 +58,7 @@ class PDB:
         """
         Return the content of a PDB entry as a string
         """
-        response = urllib.urlopen("http://www.rcsb.org/pdb/download/downloadFile.do?fileFormat=pdb&compression=NO&structureId=%s"%pdb_id)
+        response = urllib.request.urlopen("http://www.rcsb.org/pdb/download/downloadFile.do?fileFormat=pdb&compression=NO&structureId=%s"%pdb_id)
         content = str(response.read())
         return content
 
@@ -237,11 +237,11 @@ class PDB:
 
             post_data += '</orgPdbCompositeQuery>'
 
-        import urllib2
+        import urllib.request, urllib.error, urllib.parse
 
-        req = urllib2.Request("http://www.rcsb.org/pdb/rest/search", data = post_data)
+        req = urllib.request.Request("http://www.rcsb.org/pdb/rest/search", data = post_data)
 
-        f = urllib2.urlopen(req)
+        f = urllib.request.urlopen(req)
 
         result = f.read()
 
@@ -348,9 +348,9 @@ class NCBI:
         response = None
 
         if len(ids) > 200:
-            response = urllib.urlopen("%sefetch.fcgi"%self._eutils_base_url, urllib.urlencode(data))
+            response = urllib.request.urlopen("%sefetch.fcgi"%self._eutils_base_url, urllib.parse.urlencode(data))
         else:
-            response = urllib.urlopen("%sefetch.fcgi?%s"%(self._eutils_base_url, urllib.urlencode(data)))
+            response = urllib.request.urlopen("%sefetch.fcgi?%s"%(self._eutils_base_url, urllib.parse.urlencode(data)))
 
         if header:
             content = str(response.read(header))
@@ -363,7 +363,7 @@ class NCBI:
         """
         Wrapper for the Esearch Entrez Utilities
         """
-        response = urllib.urlopen("%sesearch.fcgi?db=%s&term=%s&retstart=%i&retmax=%i"%(self._eutils_base_url, db, term, retstart, retmax))
+        response = urllib.request.urlopen("%sesearch.fcgi?db=%s&term=%s&retstart=%i&retmax=%i"%(self._eutils_base_url, db, term, retstart, retmax))
         content = str(response.read())
         response.close()
         return content
@@ -373,7 +373,7 @@ class NCBI:
         Wrapper for the Esummary Entrez Utilities
         """
         if len(ids) < 200:
-            response = urllib.urlopen("%sesummary.fcgi?db=%s&id=%s&retstart=%i&retmax=%i"%(self._eutils_base_url, db, ','.join(ids), retstart, retmax))
+            response = urllib.request.urlopen("%sesummary.fcgi?db=%s&id=%s&retstart=%i&retmax=%i"%(self._eutils_base_url, db, ','.join(ids), retstart, retmax))
             content = str(response.read())
             response.close()
             return content
@@ -382,9 +382,9 @@ class NCBI:
                 'db':db,
                 'id':','.join(ids)
             }
-            data = urllib.urlencode(data)
-            req = urllib2.Request("%sesummary.fcgi"%self._eutils_base_url, data)
-            response = urllib2.urlopen(req)
+            data = urllib.parse.urlencode(data)
+            req = urllib.request.Request("%sesummary.fcgi"%self._eutils_base_url, data)
+            response = urllib.request.urlopen(req)
             content = str(response.read())
             response.close()
             return content
@@ -393,7 +393,7 @@ class NCBI:
         """
         Wrapper for the Elink Entrez Utilities
         """
-        response = urllib.urlopen("%selink.fcgi?db=%s&dbfrom=%s&id=%s"%(self._eutils_base_url, db, dbfrom, id))
+        response = urllib.request.urlopen("%selink.fcgi?db=%s&dbfrom=%s&id=%s"%(self._eutils_base_url, db, dbfrom, id))
         content = str(response.read())
         response.close()
         return content
@@ -419,7 +419,7 @@ class RNA3DHub:
         - the list of pdb ids
         """
         rows = []
-        response = urllib.urlopen("http://rna.bgsu.edu/rna3dhub/nrlist/download/"+str(self.release)+"/"+str(resolution)+"A/csv")
+        response = urllib.request.urlopen("http://rna.bgsu.edu/rna3dhub/nrlist/download/"+str(self.release)+"/"+str(resolution)+"A/csv")
         content = str(response.read())
         for line in content.split('\n'):
             if len(line.strip()) > 0:
@@ -474,7 +474,7 @@ class Rfam:
         content = None
 
         if self.use_website:
-            response = urllib.urlopen("%s/family/%s/alignment?acc=%s&alnType=%s&nseLabels=%i&format=stockholm&download=1"%(self.base_url, rfam_id, rfam_id, aln_type, nse_labels))
+            response = urllib.request.urlopen("%s/family/%s/alignment?acc=%s&alnType=%s&nseLabels=%i&format=stockholm&download=1"%(self.base_url, rfam_id, rfam_id, aln_type, nse_labels))
             content = str(response.read())
             response.close()
             if not content.startswith("# STOCKHOLM"):
@@ -601,7 +601,7 @@ class Rfam:
                 rfam_family['ncbi_id'] = tokens[6]
                 rfam_family['ncbi_start'] = tokens[7]
                 rfam_family['ncbi_end'] = tokens[8]
-                if not rfam_families_with_3Ds.has_key(rfam_accession):
+                if rfam_accession not in rfam_families_with_3Ds:
                     rfam_families_with_3Ds[rfam_accession] = []
                 rfam_families_with_3Ds[rfam_accession].append(rfam_family)
         return rfam_families_with_3Ds
