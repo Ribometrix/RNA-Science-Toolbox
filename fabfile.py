@@ -25,7 +25,7 @@ def python(manager="conda"):
         local('conda config --set always_yes TRUE')
         local('conda install pandas')
         local('conda install pymongo')
-        local('conda install pysam')
+        #local('conda install pysam')
         local('conda install ujson')
         local('conda install tornado')
         local('pip install docker') #conda not working
