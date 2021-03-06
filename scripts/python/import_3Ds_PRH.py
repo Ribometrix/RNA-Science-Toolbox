@@ -6,11 +6,79 @@ Annotate and import solved 3D structures into MongoDB
 
 import sys, os, math, datetime
 from pyrna.task import Task
-from pyrna.db import RNA3DHub, PDB, PDBQuery
 from pyrna import parsers
 from pyrna.computations import Rnaview
 from bson.objectid import ObjectId
 from pymongo import MongoClient
+
+import requests, json
+
+class Client():
+    def __init__(self):
+        pass
+
+
+    def query_all_RNAs(self):
+        # see: https://search.rcsb.org/search-attributes.html
+        # rcsb_entry_info.polymer_entity_count_RNA
+        #   Should be > 0 for RNA
+        # rcsb_entry_info.polymer_entity_count_DNA
+        #   Should be zero for no DNA
+        # rcsb_entry_info.polymer_entity_count_protein
+        #   Should b e zero for no protein
+        # rcsb_entry_info.polymer_entity_count_nucleic_acid_hybrid
+        #   should be zero for no RNA
+        json_dict = {
+              "query": {
+                  "type": "group",
+                  "logical_operator": "and",
+                  "nodes": [
+                      {
+                        "type": "terminal",
+                        "service": "text",
+                          # should have > 0 RNA
+                          "parameters": {
+                              "attribute": "rcsb_entry_info.polymer_entity_count_RNA",
+                              "operator": "greater",
+                              "value": 0
+                          }
+                    },
+                      {
+                          # should have = 0 DNA
+                          "type": "terminal",
+                          "service": "text",
+                          "parameters": {
+                              "attribute": "rcsb_entry_info.polymer_entity_count_DNA",
+                              "operator": "equals",
+                              "value": 0
+                          }},
+                      {
+                          # should have = 0 protein
+                          "type": "terminal",
+                          "service": "text",
+                          "parameters": {
+                              "attribute": "rcsb_entry_info.polymer_entity_count_protein",
+                              "operator": "equals",
+                              "value": 0
+                          }},
+
+                      ]
+              },
+            # get everything
+            "request_options": {
+                "return_all_hits": True
+            },
+              "return_type": "entry"
+            }
+        json_str = json.dumps(json_dict,indent=0).replace("\n","")
+        url = "https://search.rcsb.org/rcsbsearch/v1/query?json={:s}".format(json_str)
+        response = requests.get(url)
+        assert response.ok
+        response_json = json.loads(response.text)
+        ids = \
+            sorted(set([i["identifier"] for i in response_json['result_set']]))
+        return ids
+
 
 def import_3Ds(db_host = 'localhost', db_port = 27017, rna3dhub = False, canonical_only = True, annotate = False, limit = 5000):
     client = MongoClient(db_host, db_port)
@@ -26,17 +94,8 @@ def import_3Ds(db_host = 'localhost', db_port = 27017, rna3dhub = False, canonic
     rnaview = Rnaview()
 
     if not rna3dhub:
-        pdb = PDB()
-        query ="""<orgPdbQuery>
-    <version>head</version>
-    <queryType>org.pdb.query.simple.ChainTypeQuery</queryType>
-    <description>Chain Type: there is a Protein and a RNA chain but not any DNA or Hybrid</description>
-    <containsProtein>N</containsProtein>
-    <containsDna>N</containsDna>
-    <containsRna>Y</containsRna>
-    <containsHybrid>N</containsHybrid>
-  </orgPdbQuery>"""
-        pdb_ids = pdb.query(query)
+        pdb = Client()
+        pdb_ids = pdb.query_all_RNAs()
         print("%i 3Ds to process"%len(pdb_ids))
 
         for pdb_id in pdb_ids:
