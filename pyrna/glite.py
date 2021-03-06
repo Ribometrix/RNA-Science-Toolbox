@@ -1,4 +1,5 @@
-import commands, re, time, os, shutil
+import re, time, os, shutil, sys
+import subprocess as commands
 
 def init_proxy(virtual_organisation="vo.grand-est.fr", proxy_server = "myproxy.cern.ch", print_output=False):
     """
@@ -9,11 +10,11 @@ def init_proxy(virtual_organisation="vo.grand-est.fr", proxy_server = "myproxy.c
     """
     output = commands.getoutput("voms-proxy-init --voms %s"%virtual_organisation)
     if print_output:
-        print output 
+        print (output)
     if proxy_server:
         output = commands.getoutput("myproxy-init -v -s %s -d -n -t 48 -c 720 "%proxy_server)
         if print_output:
-            print output    
+            print (output)
 
 def write_pyrna_job(directory, bash_script_content, uid, input_files = [], endpoint="https://sbgwms1.in2p3.fr:7443/glite_wms_wmproxy_server", virtual_organisation="vo.grand-est.fr", proxy_server= "myproxy.cern.ch", algorithms = None , python = None, submit = True):
     """
@@ -80,7 +81,7 @@ def submit_glite_job(directory, jdl_file_name, endpoint="https://sbgwms1.in2p3.f
     If the file already exists, the new jobs ids are appended at the end of this file.
     """
     if not os.path.exists(directory):
-        print "Cannot find %s"%directory
+        print ("Cannot find %s"%directory)
         return
 
     directory = os.path.realpath(directory)
@@ -113,7 +114,7 @@ def check_jobs_statuses(submission_output, serialize=False, suffix="", verbose =
     - suffix: a suffix that will be added to the default file names if the job statuses are serialized
     """
     if not os.path.exists(submission_output):
-        print "Cannot find %s"%submission_output
+        print ("Cannot find %s"%submission_output)
         return
     submission_dir =os.path.dirname(os.path.realpath(submission_output))
     
@@ -145,67 +146,67 @@ def check_jobs_statuses(submission_output, serialize=False, suffix="", verbose =
             if re.search("Current Status:.+Success",output):
                 succeeded_jobs +=1
                 if verbose:
-                    print "Success: "+tokens[0]+" "+tokens[1].strip()
+                    print ("Success: "+tokens[0]+" "+tokens[1].strip())
                 if serialize:
                     succeeded_jobs_output.write(line)
             elif re.search("Current Status:.+Aborted",output):
                 aborted_jobs +=1
                 if verbose:
-                    print "!!! Aborted !!!: "+tokens[0]+" "+tokens[1].strip()
+                    print ("!!! Aborted !!!: "+tokens[0]+" "+tokens[1].strip())
                 if serialize:
                     aborted_jobs_output.write(line)
             elif re.search("Current Status:.+Running",output):
                 running_jobs +=1
                 if verbose:
-                    print "Running: "+tokens[0]+" "+tokens[1].strip()
+                    print ("Running: "+tokens[0]+" "+tokens[1].strip())
                 if serialize:
                     running_status_output.write(line)   
             elif re.search("Current Status:.+Scheduled",output):
                 scheduled_jobs +=1
                 if verbose:
-                    print "Scheduled: "+tokens[0]+" "+tokens[1].strip()
+                    print ("Scheduled: "+tokens[0]+" "+tokens[1].strip())
                 if serialize:
                     scheduled_jobs_output.write(line)
             elif re.search("Current Status:.+!=0",output):
                 done_without_success +=1
                 if verbose:
-                    print "!!! Done without success !!!: "+tokens[0]+" "+tokens[1].strip()
+                    print ("!!! Done without success !!!: "+tokens[0]+" "+tokens[1].strip())
                 if serialize:
                     done_without_success_jobs_output.write(line)
             elif re.search("Current Status:.+(Failed)",output):
                 failed_jobs +=1
                 if verbose:
-                    print "!!! Done failed (no recovering available)  !!!: "+tokens[0]+" "+tokens[1].strip()
+                    print ("!!! Done failed (no recovering available)  !!!: "+tokens[0]+" "+tokens[1].strip())
                 if serialize:
                     failed_jobs_output.write(line)
             elif re.search("Current Status:.+Cleared",output):
                 cleared_jobs +=1
                 if verbose:
-                    print "Already Cleared: "+tokens[0]+" "+tokens[1].strip()
+                    print ("Already Cleared: "+tokens[0]+" "+tokens[1].strip())
                 if serialize:
                     cleared_jobs_output.write(line)
             elif re.search("Current Status:.+Cancelled",output):
                 cancelled_jobs +=1
                 if verbose:
-                    print "Cancelled: "+tokens[0]+" "+tokens[1].strip()
+                    print ("Cancelled: "+tokens[0]+" "+tokens[1].strip())
                 if serialize:
                     cancelled_jobs_output.write(line)
             elif re.search("Current Status:.+Waiting",output):
                 waiting_jobs +=1
                 if verbose:
-                    print "Waiting: "+tokens[0]+" "+tokens[1].strip()
+                    print ("Waiting: "+tokens[0]+" "+tokens[1].strip())
             elif re.search("Current Status:.+Ready",output):
                 ready_jobs +=1
                 if verbose:
-                    print "Ready: "+tokens[0]+" "+tokens[1].strip()
+                    print ("Ready: "+tokens[0]+" "+tokens[1].strip())
             else:
                 unknown_status +=1
                 if verbose:
-                    print "Unknown Status: "+tokens[0]+" "+tokens[1].strip()
+                    print ("Unknown Status: "+tokens[0]+" "+tokens[1].strip())
                 if serialize:
                     unknown_status_output.write(line)
         if verbose:
-            print "Running: %s\nScheduled: %s\nReady: %s\nDone Failed: %s\nDone Without Success: %s\nAborted: %s\nSucceeded: %s\nWaiting: %s\nCancelled: %s\nCleared: %s\nUnknown Status: %s\n"%(str(running_jobs),str(scheduled_jobs),str(ready_jobs),str(failed_jobs),str(done_without_success), str(aborted_jobs),str(succeeded_jobs),str(waiting_jobs),str(cancelled_jobs),str(cleared_jobs), str(unknown_status))          
+            print ("Running: %s\nScheduled: %s\nReady: %s\nDone Failed: %s\nDone Without Success: %s\nAborted: %s\nSucceeded: %s\nWaiting: %s\nCancelled: %s\nCleared: %s\nUnknown Status: %s\n"%(str(running_jobs),str(scheduled_jobs),str(ready_jobs),str(failed_jobs),str(done_without_success), str(aborted_jobs),str(succeeded_jobs),str(waiting_jobs),str(cancelled_jobs),str(cleared_jobs), str(unknown_status)))
     if serialize:
         failed_jobs_output.close()
         aborted_jobs_output.close()
@@ -223,7 +224,7 @@ def cancel_jobs(jobs_list):
     - jobs_list: the file containing the list of the jobs to cancel
     """
     if not os.path.exists(jobs_list):
-        print "Cannot find %s"%jobs_list
+        print ("Cannot find %s"%jobs_list)
         return
     i=0
     with open(jobs_list) as h: 
@@ -231,7 +232,7 @@ def cancel_jobs(jobs_list):
             tokens = line.split(" ")     
             commands.getoutput("glite-wms-job-cancel "+tokens[1].strip()+' <<< "y"')
             i+=1
-    print "%s job(s) cancelled."%(str(i))               
+    print ("%s job(s) cancelled."%(str(i)))
 
 def resubmit_jobs(jobs_list, submission_result_file_name):
     """
@@ -239,7 +240,7 @@ def resubmit_jobs(jobs_list, submission_result_file_name):
     - jobs_list: the file containing the list of the jobs to resubmit
     """
     if not os.path.exists(jobs_list):
-        print "Cannot find %s"%jobs_list
+        print ("Cannot find %s"%jobs_list)
         return
     i=0
     with open(jobs_list) as h: 
@@ -253,7 +254,7 @@ def resubmit_jobs(jobs_list, submission_result_file_name):
             if i%20 == 0:
                 time.sleep(60)#we wait 60 seconds before to resubmit the next 20 jobs
 
-    print "%s job(s) resubmitted."%(str(i))             
+    print ("%s job(s) resubmitted."%(str(i)))
     
 def recover_job_outputs(jobs_list, output_dir):
     """
@@ -262,10 +263,10 @@ def recover_job_outputs(jobs_list, output_dir):
     - output_dir: the directory where to store the outputs
     """
     if not os.path.exists(jobs_list):
-        print "Cannot find %s"%jobs_list
+        print ("Cannot find %s"%jobs_list)
         return
     if not os.path.exists(output_dir):
-        print "Cannot find %s"%output_dir
+        print ("Cannot find %s"%output_dir)
         return
     output_dir = os.path.realpath(output_dir)
     i=0
@@ -277,7 +278,7 @@ def recover_job_outputs(jobs_list, output_dir):
             for _f in os.listdir(output_dir):
                 if _f.endswith(id):
                     already_recovered = True
-                    print "Seems already recovered : %s"%line
+                    print ("Seems already recovered : %s"%line)
                     break
             if not already_recovered:    
                 commands.getoutput("glite-wms-job-output --dir "+output_dir+" "+tokens[1].strip())
@@ -287,7 +288,7 @@ def recover_job_outputs(jobs_list, output_dir):
                         if i%50 == 0:
                             time.sleep(5)#we wait 5 seconds before to recover the next 50 jobs
                         break                               
-    print "%s job output(s) recovered in %s."%(str(i),output_dir)               
+    print ("%s job output(s) recovered in %s."%(str(i),output_dir)  )
 
 def create_jdl_file(file_name, executable, arguments, input_sandbox, virtual_organisation, job_type="Normal", output_sandbox=["stdout.out","stderr.err"],  stdoutput="stdout.out", stderror="stderr.err", proxy_server=None):
     with open(file_name,'w') as f:

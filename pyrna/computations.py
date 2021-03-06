@@ -10,7 +10,7 @@ import docker
 
 import urllib.request, urllib.parse, urllib.error, urllib.request, urllib.error, urllib.parse
 
-def maketrans(*arg,**kw):
+def maketrans(*args,**kw):
     return str.maketrans(*args,**kw)
 
 def get_api_key(rest_server):

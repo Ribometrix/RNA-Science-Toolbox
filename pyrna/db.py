@@ -1,8 +1,10 @@
-import os, shutil, subprocess, re, urllib.request, urllib.parse, urllib.error, urllib.request, urllib.error, urllib.parse
+import os, shutil, subprocess, re
 from pandas import DataFrame
 from pyrna.features import RNA
-from . import parsers, utils
+from pyrna import parsers, utils
 from pymongo import MongoClient
+import pandas as pd
+import urllib.request
 
 class charnDB:
     """
@@ -232,14 +234,12 @@ class PDB:
     <contains_dna>'+contains_dna+'</contains_dna>\
     <contains_rna>'+contains_rna+'</contains_rna>\
     <contains_hybrid>'+contains_hybrid+'</contains_hybrid>\
-    </orgPdbQuery></queryRefinement>'
+    </orgPRNA3DHubuery></queryRefinement>'
             refinementLevel += 1
 
             post_data += '</orgPdbCompositeQuery>'
 
-        import urllib.request, urllib.error, urllib.parse
-
-        req = urllib.request.Request("http://www.rcsb.org/pdb/rest/search", data = post_data)
+        req = urllib.request.Request("http://www.rcsb.org/pdb/rest/search", data = post_data.encode("utf-8"))
 
         f = urllib.request.urlopen(req)
 
@@ -283,7 +283,6 @@ class NCBI:
         ftp.retrbinary('RETR assembly_summary_genbank.txt', gFile.write)
         gFile.close()
         ftp.quit()
-        import pandas as pd
         df = pd.read_csv("%s/assembly_summary_genbank.txt"%self.cache_dir, sep='\t')
         return df
 
@@ -348,9 +347,9 @@ class NCBI:
         response = None
 
         if len(ids) > 200:
-            response = urllib.request.urlopen("%sefetch.fcgi"%self._eutils_base_url, urllib.parse.urlencode(data))
+            response = urllib.request.urlopen("%sefetch.fcgi"%self._eutils_base_url, urllib.urlencode(data))
         else:
-            response = urllib.request.urlopen("%sefetch.fcgi?%s"%(self._eutils_base_url, urllib.parse.urlencode(data)))
+            response = urllib.request.urlopen("%sefetch.fcgi?%s"%(self._eutils_base_url, urllib.urlencode(data)))
 
         if header:
             content = str(response.read(header))
@@ -382,7 +381,7 @@ class NCBI:
                 'db':db,
                 'id':','.join(ids)
             }
-            data = urllib.parse.urlencode(data)
+            data = urllib.urlencode(data)
             req = urllib.request.Request("%sesummary.fcgi"%self._eutils_base_url, data)
             response = urllib.request.urlopen(req)
             content = str(response.read())
@@ -601,7 +600,7 @@ class Rfam:
                 rfam_family['ncbi_id'] = tokens[6]
                 rfam_family['ncbi_start'] = tokens[7]
                 rfam_family['ncbi_end'] = tokens[8]
-                if rfam_accession not in rfam_families_with_3Ds:
+                if not rfam_families_with_3Ds.has_key(rfam_accession):
                     rfam_families_with_3Ds[rfam_accession] = []
                 rfam_families_with_3Ds[rfam_accession].append(rfam_family)
         return rfam_families_with_3Ds
