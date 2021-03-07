@@ -28,6 +28,10 @@ class Block:
     def merge(self, block):
         pass
 
+def i_minus_x(args):
+    i,x = args
+    return i-x
+
 class Location:
     """
     A Location defines a range of molecular positions, continuous or not. A location is made with Block objects.
@@ -44,8 +48,8 @@ class Location:
             self.add_block(Block(start, end))
         elif single_positions:
             single_positions.sort()
-            for k, g in groupby(enumerate(single_positions), lambda i,x :i-x):
-                _range = map(itemgetter(1), g)
+            for k, g in groupby(enumerate(single_positions), i_minus_x):
+                _range = list(map(itemgetter(1), g))
                 self.blocks.append(Block(min(_range), max(_range)))
         elif nested_lists:
             for nested_list in nested_lists:
@@ -217,7 +221,7 @@ class RNA(Molecule):
             self.add_residue(residue)
 
     def add_residue(self, residue):
-        if modified_ribonucleotides.has_key(residue):
+        if residue in modified_ribonucleotides:
             self.modified_residues.append((residue, len(self.sequence)+1))
             residue = modified_ribonucleotides[residue]
         if residue in ['A', 'U', 'G', 'C']:
@@ -247,7 +251,7 @@ class Protein(Molecule):
             self.add_residue(residue)
 
     def add_residue(self, residue):
-        if modified_aminoacids.has_key(residue):
+        if residue in modified_aminoacids:
             self.modified_residues.append((residue, len(self.sequence)+1))
             residue = modified_aminoacids[residue]
         self.sequence = ''.join([self.sequence, residue])
@@ -644,7 +648,8 @@ class SecondaryStructure:
     def find_junctions(self):
         self.junctions = []
         for single_strand in self.single_strands:
-            if single_strand['location'][0] == 1 or single_strand['location'][-1] == len(self.rna) or len(filter(lambda junction: single_strand in junction['single_strands'], self.junctions)):
+            filtered = list(filter(lambda junction: single_strand in junction['single_strands'], self.junctions))
+            if single_strand['location'][0] == 1 or single_strand['location'][-1] == len(self.rna) or len(filtered):
                 continue
             strands = [single_strand]
             descr = self.rna[single_strand['location'][0]-1:single_strand['location'][-1]]+" "
@@ -653,7 +658,7 @@ class SecondaryStructure:
             next_single_strand = None
 
             while current_pos >= 1 and current_pos <= len(self.rna):
-                next_single_strand = filter(lambda single_strand : single_strand['location'][0] == current_pos, self.single_strands)
+                next_single_strand = list(filter(lambda single_strand : single_strand['location'][0] == current_pos, self.single_strands))
                 if next_single_strand and next_single_strand[0] == single_strand:
                     break
                 elif next_single_strand:
@@ -662,7 +667,7 @@ class SecondaryStructure:
                     descr += self.rna[next_single_strand[0]['location'][0]-1:next_single_strand[0]['location'][-1]]+" "
                     current_pos = self.get_paired_residue(next_single_strand[0]['location'][-1]+1)+1
                     continue
-                next_helix = filter(lambda helix: current_pos == helix['location'][0][0] or current_pos == helix['location'][-1][-1]-helix['length']+1, self.helices)
+                next_helix = list(filter(lambda helix: current_pos == helix['location'][0][0] or current_pos == helix['location'][-1][-1]-helix['length']+1, self.helices))
                 if next_helix:
                     descr += '- '
                     location.append([current_pos-1, current_pos])
@@ -677,7 +682,10 @@ class SecondaryStructure:
 
         #now we search for junctions with only directly linked helices
         for helix in self.helices:
-            if helix['location'][0][0] == 1 or helix['location'][-1][-1] == len(self.rna) or len(filter(lambda junction: helix['location'][0][0] in sum(junction['location'],[]) or helix['location'][-1][-1] in sum(junction['location'],[]), self.junctions)):
+            filtered_helix = list(filter(lambda junction: helix['location'][0][0] in sum(junction['location'],[]) or helix['location'][-1][-1] in sum(junction['location'],[]), self.junctions))
+            if (helix['location'][0][0] == 1) or \
+               (helix['location'][-1][-1] == len(self.rna)) or \
+                len(filtered_helix):
                 continue
             descr = ""
             location = []
@@ -685,7 +693,7 @@ class SecondaryStructure:
             current_pos = helix['location'][-1][-1]+1
 
             while current_pos >= 1 and current_pos <= len(self.rna):
-                next_helix = filter(lambda helix: current_pos == helix['location'][0][0] or current_pos == helix['location'][1][0], self.helices)
+                next_helix = list(filter(lambda helix: current_pos == helix['location'][0][0] or current_pos == helix['location'][1][0], self.helices))
                 if next_helix and next_helix[0] == helix:
                     descr += '- '
                     location.append([current_pos-1, current_pos])
@@ -711,7 +719,7 @@ class SecondaryStructure:
             current_pos = helix['location'][0][1]+1
 
             while current_pos >= 1 and current_pos <= len(self.rna):
-                next_helix = filter(lambda helix: current_pos == helix['location'][0][0] or current_pos == helix['location'][1][0], self.helices)
+                next_helix = list(filter(lambda helix: current_pos == helix['location'][0][0] or current_pos == helix['location'][1][0], self.helices))
                 if next_helix and next_helix[0] == helix:
                     descr += '- '
                     location.append([current_pos-1, current_pos])
@@ -993,7 +1001,7 @@ class TertiaryStructure:
             atom_name = 'O2P'
         elif atom_name == 'OP3':
             atom_name = 'O3P'
-        if self.residues.has_key(absolute_position):
+        if absolute_position in self.residues:
             self.residues[absolute_position]['atoms'].append({
                     'name': atom_name,
                     'coords': coords
@@ -1007,10 +1015,11 @@ class TertiaryStructure:
              }
 
     def get_residue_label(self, absolute_position):
-        if self.numbering_system.has_key(str(absolute_position)):
-            return self.numbering_system[str(absolute_position)]
+        str_pos = str(absolute_position)
+        if str_pos in self.numbering_system:
+            return self.numbering_system[str_pos]
         else:
-            return str(absolute_position)
+            return str_pos
 
 modified_aminoacids = {
     "ALA": "A",

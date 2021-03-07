@@ -10,8 +10,18 @@ from pyrna import parsers
 from pyrna.computations import Rnaview
 from bson.objectid import ObjectId
 from pymongo import MongoClient
+from pyrna.db import PDB as db_PDB
+from pyrna.db import RNA3DHub as db_RNA3D
+import urllib
+
 
 import requests, json
+
+def query_by_dict(dict_v):
+    json_str = json.dumps(dict_v, indent=0).replace("\n", "")
+    url = "https://search.rcsb.org/rcsbsearch/v1/query?json={:s}".format(json_str)
+    response = requests.get(url)
+    return response
 
 class Client():
     def __init__(self):
@@ -70,15 +80,34 @@ class Client():
             },
               "return_type": "entry"
             }
-        json_str = json.dumps(json_dict,indent=0).replace("\n","")
-        url = "https://search.rcsb.org/rcsbsearch/v1/query?json={:s}".format(json_str)
-        response = requests.get(url)
+        response = query_by_dict(json_dict)
         assert response.ok
         response_json = json.loads(response.text)
         ids = \
             sorted(set([i["identifier"] for i in response_json['result_set']]))
         return ids
 
+
+def single_3ds_cluster_or_None(db,pdb_old_version,pdb_id,rnaview):
+    try:
+        to_parse = pdb_old_version.get_entry(pdb_id)
+    except urllib.error.HTTPError as e:  # se the first pdb_id in the list of ids making a cluster
+        print(e)
+        print("No annotation for %s" % pdb_id)
+        to_parse = None
+    if to_parse is not None:
+        to_annotate_list =parsers.parse_pdb(to_parse)
+        for ts in to_annotate_list :
+            try:
+                ss = None
+                if annotate:
+                    ss, ts = rnaview.annotate(ts, canonical_only=canonical_only)
+                save(db, ss, ts, pdb_id, limit)
+            except Exception as e:
+                print(e)
+                print("No annotation for %s" % pdb_id)
+                save(db, None, ts, pdb_id, limit)
+    return to_parse
 
 def import_3Ds(db_host = 'localhost', db_port = 27017, rna3dhub = False, canonical_only = True, annotate = False, limit = 5000):
     client = MongoClient(db_host, db_port)
@@ -97,44 +126,41 @@ def import_3Ds(db_host = 'localhost', db_port = 27017, rna3dhub = False, canonic
         pdb = Client()
         pdb_ids = pdb.query_all_RNAs()
         print("%i 3Ds to process"%len(pdb_ids))
-
-        for pdb_id in pdb_ids:
-            if db['tertiaryStructures'].find_one({'source':"db:pdb:%s"%pdb_id}):
+        pdb_old_version = db_PDB()
+        n = len(pdb_ids)
+        for i,pdb_id in enumerate(pdb_ids):
+            print("Running versus {:s} ({:d}/{:d})".format(pdb_id,i+1,n))
+            db_element = db['tertiaryStructures'].find_one({'source':"db:pdb:%s"%pdb_id})
+            if db_element:
                 continue
-            print("Recover %s"%pdb_id)
-            for ts in parsers.parse_pdb(pdb.get_entry(pdb_id)):
+            parsed = parsers.parse_pdb(pdb_old_version.get_entry(pdb_id))
+            for j,ts in enumerate(parsed):
                 try:
                     ss = None
                     if annotate:
                         ss, ts = rnaview.annotate(ts, canonical_only = canonical_only)
                     save(db, ss, ts, pdb_id, limit)
-
+                    print("\tRecover {:s} / {:d}".format(pdb_id,j))
                 except Exception as e:
                     print(e)
-                    print ("No annotation for %s"%pdb_id)
+                    print ("\tNo annotation for %s"%pdb_id)
                     save(db, None, ts, pdb_id, limit)
     else:
-        pdb = PDB()
-        rna3dHub = RNA3DHub()
+        rna3dHub = db_RNA3D()
         clusters = rna3dHub.get_clusters()
         print ("%i 3Ds to process"%len(clusters))
-
+        pdb_old_version = db_PDB()
         for cluster in clusters['pdb-ids']:
-            pdb_id = cluster[0].split('|')[0]
-            if db['tertiaryStructures'].find_one({'source':"db:pdb:%s"%pdb_id}):
+            if len(cluster) == 0:
                 continue
-            print ("Recover %s"%pdb_id) #we use the first pdb_id in the list of ids making a cluster
-            for ts in parsers.parse_pdb(pdb.get_entry(pdb_id)):
-                try:
-                    ss = None
-                    if annotate:
-                        ss, ts = rnaview.annotate(ts, canonical_only = canonical_only)
-                    save(db, ss, ts, pdb_id, limit)
-
-                except Exception as e:
-                    print (e)
-                    print ("No annotation for %s"%pdb_id)
-                    save(db, None, ts, pdb_id, limit)
+            all_ids = sorted(set([cluster_to_split.split('|')[0]
+                                  for cluster_to_split in cluster]))
+            for pdb_id in all_ids:
+                only_None_if_failed = \
+                    single_3ds_cluster_or_None(db, pdb_old_version, pdb_id, rnaview)
+                if only_None_if_failed is not None:
+                    # found an example for this cluster
+                    break
 
 def save(db, secondary_structure, tertiary_structure, pdbId, limit):
     if db['junctions'].count() >= limit:
@@ -160,7 +186,7 @@ def save(db, secondary_structure, tertiary_structure, pdbId, limit):
                 'sequence': secondary_structure.rna.sequence,
             }
             if not db['ncRNAs'].find_one({'_id':ncRNA['_id']}):
-                db['ncRNAs'].insert(ncRNA)
+                db['ncRNAs'].insert_one(ncRNA)
         else:
             ncRNA = {
                 '_id': secondary_structure.rna._id,
@@ -169,7 +195,7 @@ def save(db, secondary_structure, tertiary_structure, pdbId, limit):
                 'sequence': secondary_structure.rna.sequence,
             }
             if not db['ncRNAs'].find_one({'_id':ncRNA['_id']}):
-                db['ncRNAs'].insert(ncRNA)
+                db['ncRNAs'].insert_one(ncRNA)
             ncRNA = {
                 '_id': tertiary_structure.rna._id,
                 'source': tertiary_structure.rna.source,
@@ -177,7 +203,7 @@ def save(db, secondary_structure, tertiary_structure, pdbId, limit):
                 'sequence': tertiary_structure.rna.sequence,
             }
             if not db['ncRNAs'].find_one({'_id':ncRNA['_id']}):
-                db['ncRNAs'].insert(ncRNA)
+                db['ncRNAs'].insert_one(ncRNA)
 
         secondary_structure.find_junctions()
 
@@ -194,7 +220,7 @@ def save(db, secondary_structure, tertiary_structure, pdbId, limit):
                 'name': helix['name'],
                 'location': helix['location']
             }
-            if helix.has_key('interactions'):
+            if "interactions" in helix:
                 interactions_descr = []
                 for interaction in helix['interactions']:
                     interactions_descr.append({
@@ -229,7 +255,7 @@ def save(db, secondary_structure, tertiary_structure, pdbId, limit):
 
         ss_descr['tertiaryInteractions'] = tertiary_interactions_descr
 
-        db['secondaryStructures'].insert(ss_descr)
+        db['secondaryStructures'].insert_one(ss_descr)
 
     ncRNA = {
         '_id': tertiary_structure.rna._id,
@@ -238,7 +264,7 @@ def save(db, secondary_structure, tertiary_structure, pdbId, limit):
         'sequence': tertiary_structure.rna.sequence,
     }
     if not db['ncRNAs'].find_one({'_id':ncRNA['_id']}):
-        db['ncRNAs'].insert(ncRNA)
+        db['ncRNAs'].insert_one(ncRNA)
 
     ts_descr = {
         '_id': tertiary_structure._id,
@@ -272,7 +298,7 @@ def save(db, secondary_structure, tertiary_structure, pdbId, limit):
     ts_descr['residues'] = residues_descr
 
     if not db['tertiaryStructures'].find_one({'_id':ts_descr['_id']}):
-        db['tertiaryStructures'].insert(ts_descr)
+        db['tertiaryStructures'].insert_one(ts_descr)
 
         if secondary_structure:
 
@@ -289,9 +315,9 @@ def save(db, secondary_structure, tertiary_structure, pdbId, limit):
                 }
                 computation['outputs'].append(junction_descr['_id']+"@junctions")
 
-                db['junctions'].insert(junction_descr)
+                db['junctions'].insert_one(junction_descr)
 
-            db['computations'].insert(computation)
+            db['computations'].insert_one(computation)
 
 if __name__ == '__main__':
     db_host = 'localhost'

@@ -590,7 +590,7 @@ class Clustalw(Tool):
 
         for line in output.split('\n'):
             tokens = re.split('\s+',line)
-            if len(tokens) == 2 and aligned_molecules.has_key(tokens[0]):
+            if len(tokens) == 2 and (tokens[0] in aligned_molecules):
                 aligned_molecules[tokens[0]] += tokens[1]
 
         rnas = []
@@ -1452,7 +1452,7 @@ class Mlocarna(Tool):
 
         for line in output.split('\n'):
             tokens = re.split('\s+', line)
-            if len(tokens) == 2 and aligned_molecules.has_key(tokens[0]):
+            if len(tokens) == 2 and (tokens[0] in aligned_molecules):
                 aligned_molecules[tokens[0]] += tokens[1]
             elif tokens[0] == 'alifold':
                 consensus2D = parsers.parse_bn(tokens[1])
@@ -1917,7 +1917,8 @@ class Rnaview(Tool):
                     pdb_file.write(pdb_content)
                 else:
                     pdb_file.write(to_pdb(tertiary_structure, export_numbering_system = True))
-            commands.getoutput("docker run -v %s:/data fjossinet/assemble2 rnaview -p /data/%s"%(self.cache_dir,pdb_file_name))
+            command = "docker run -v %s:/data fjossinet/assemble2 rnaview -p /data/%s"%(self.cache_dir,pdb_file_name)
+            output_from_command = commands.getoutput(command)
 
             xml_file_name = self.cache_dir+'/'+pdb_file_name+".xml"
             xml_content = ""
@@ -1925,7 +1926,8 @@ class Rnaview(Tool):
                 with open(xml_file_name) as xml_file:
                     xml_content = xml_file.read()
             else:
-                raise Exception("No file %s"%xml_file_name)
+                raise Exception("No file {:s}; output from rnaview was:\n{:s}".\
+                                format(xml_file_name, output_from_command))
         if raw_output:
             return xml_content
         else:

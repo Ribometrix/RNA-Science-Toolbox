@@ -209,14 +209,14 @@ def consensus2d_to_booquet(structural_alignment, junction_diameter = 20):
     print (structural_alignment)
 
     aligned_rnas, base_pairs_dataframe = parse_clustalw(structural_alignment)
-    print (aligned_rnas, base_pairs_dataframe)
+    print((aligned_rnas, base_pairs_dataframe))
     ss_object = base_pairs_to_secondary_structure(aligned_rnas[0], base_pairs_dataframe)
 
     if ss_object:
         ss_object.find_junctions()
 
         for helix in ss_object.helices:
-            print (helix['location'])
+            print((helix['location']))
             sizes = []
             descriptions = []
             for aligned_rna in aligned_rnas:
@@ -273,7 +273,7 @@ def consensus2d_to_booquet(structural_alignment, junction_diameter = 20):
                 'coords': helix['coords'],
                 'descriptions': helix['descriptions']
             }
-            if helix.has_key('quantitative_value'):
+            if 'quantitative_value' in helix:
                 descr['quantitative_value'] = helix['quantitative_value']
             helices_descr.append(descr)
 
@@ -287,9 +287,9 @@ def consensus2d_to_booquet(structural_alignment, junction_diameter = 20):
                     'descriptions': single_strand['descriptions']
                 }
 
-            if single_strand.has_key('coords'):
+            if "coords" in single_strand:
                 descr['coords'] = single_strand['coords']
-            if single_strand.has_key('quantitative_value'):
+            if "quantitative_value" in single_strand:
                 descr['quantitative_value'] = single_strand['quantitative_value']
 
             single_strands_descr.append(descr)
@@ -304,7 +304,7 @@ def consensus2d_to_booquet(structural_alignment, junction_diameter = 20):
                 'descriptions': junction['descriptions']
             }
 
-            if junction.has_key('quantitative_value'):
+            if "quantitative_value" in junction.has_key:
                 descr['quantitative_value'] = junction['quantitative_value']
 
             junctions_descr.append(descr)
@@ -323,7 +323,7 @@ def consensus2d_to_booquet(structural_alignment, junction_diameter = 20):
                                 new_points = get_points(h['coords'][0][0], h['coords'][0][1], junction['coords'][0][0], junction['coords'][0][1], distance = (junction_diameter+10)/2)
                                 if len(new_points) == 2:
                                     diagonal = {}
-                                    if h.has_key('quantitative_value'):
+                                    if 'quantitative_value' in h:
                                         diagonal['quantitative_value'] = h['quantitative_value']
                                     diagonal['coords'] = [
                                             [h['coords'][0][0], h['coords'][0][1]],
@@ -709,7 +709,7 @@ def parse_genbank(genbank_data):
                 dna.organism = organism
             
             for feature in features:
-                if feature.has_key('ncRNA_class'):
+                if 'ncRNA_class' in feature:
                     if feature['genomicStrand'] == '+':
                         feature['sequence'] = dna.sequence[feature['genomicPositions'][0]-1:feature['genomicPositions'][-1]]
                     else:
@@ -747,7 +747,7 @@ def parse_genbank(genbank_data):
                 if location.startswith("complement(join("):#a joined location on the Crick strand
                     genomic_strand = '-'
                     ends = location.split('complement(join(')[1][:-2].replace("join(", "").replace(')','').replace(',','..').split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                     if feature_type == 'CDS':
                         for i in range(1, len(ends)-2, 2):
@@ -760,7 +760,7 @@ def parse_genbank(genbank_data):
                 elif location.startswith("join(complement("):#a joined location on the Crick strand
                     genomic_strand = '-'
                     ends = location.split('join(complement(')[1][:-2].replace("complement(", "").replace(')', '').replace(',','..').split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                     if feature_type == 'CDS':
                         for i in range(1, len(ends)-2, 2):
@@ -773,20 +773,20 @@ def parse_genbank(genbank_data):
                 elif location.startswith("complement(order("):
                     genomic_strand = '-'
                     ends = location.split('complement(order(')[1][:-2].replace(',','..').split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                 elif location.startswith("order("):
                     ends = location.split('order(')[1][:-1].replace(',','..').split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                 elif location.startswith("complement("): #a location on the Crick strand
                     genomic_strand = '-'
                     ends = location.split('complement(')[1][:-1].split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                 elif location.startswith("join("): #a joined location
                     ends = location.split('join(')[1][:-1].replace(',','..').split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                     if feature_type == 'CDS':
                         for i in range(1, len(ends)-2, 2):
@@ -798,7 +798,7 @@ def parse_genbank(genbank_data):
                             features.append(intron)
                 else: #a regular location
                     ends = location.split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
 
                 feature = {
@@ -823,7 +823,7 @@ def parse_genbank(genbank_data):
                 if location.startswith("complement(join("):#a joined location on the Crick strand
                     genomic_strand = '-'
                     ends = location.split('complement(join(')[1][:-2].replace("join(", "").replace(')','').replace(',','..').split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                     if feature_type == 'CDS':
                         for i in range(1, len(ends)-2, 2):
@@ -836,7 +836,7 @@ def parse_genbank(genbank_data):
                 elif location.startswith("join(complement("):#a joined location on the Crick strand
                     genomic_strand = '-'
                     ends = location.split('join(complement(')[1][:-2].replace("complement(", "").replace(')', '').replace(',','..').split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                     if feature_type == 'CDS':
                         for i in range(1, len(ends)-2, 2):
@@ -849,20 +849,20 @@ def parse_genbank(genbank_data):
                 elif location.startswith("complement(order("):
                     genomic_strand = '-'
                     ends = location.split('complement(order(')[1][:-2].replace(',','..').split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                 elif location.startswith("order("):
                     ends = location.split('order(')[1][:-1].replace(',','..').split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                 elif location.startswith("complement("): #a location on the Crick strand
                     genomic_strand = '-'
                     ends = location.split('complement(')[1][:-1].split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                 elif location.startswith("join("): #a joined location
                     ends = location.split('join(')[1][:-1].replace(',','..').split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                     if feature_type == 'CDS':
                         for i in range(1, len(ends)-2, 2):
@@ -874,7 +874,7 @@ def parse_genbank(genbank_data):
                             features.append(intron)
                 else: #a regular location
                     ends = location.split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
 
                 feature = {
@@ -975,7 +975,7 @@ def parse_embl(embl_data):
                 if location.startswith("complement(join("):#a joined location on the Crick strand
                     genomic_strand = '-'
                     ends = location.split('complement(join(')[1][:-2].replace("join(", "").replace(')','').replace(',','..').split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                     if feature_type == 'CDS':
                         for i in range(1, len(ends)-2, 2):
@@ -988,7 +988,7 @@ def parse_embl(embl_data):
                 elif location.startswith("join(complement("):#a joined location on the Crick strand
                     genomic_strand = '-'
                     ends = location.split('join(complement(')[1][:-2].replace("complement(", "").replace(')', '').replace(',','..').split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                     if feature_type == 'CDS':
                         for i in range(1, len(ends)-2, 2):
@@ -1001,20 +1001,20 @@ def parse_embl(embl_data):
                 elif location.startswith("complement(order("):
                     genomic_strand = '-'
                     ends = location.split('complement(order(')[1][:-2].replace(',','..').split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                 elif location.startswith("order("):
                     ends = location.split('order(')[1][:-1].replace(',','..').split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                 elif location.startswith("complement("): #a location on the Crick strand
                     genomic_strand = '-'
                     ends = location.split('complement(')[1][:-1].split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                 elif location.startswith("join("): #a joined location
                     ends = location.split('join(')[1][:-1].replace(',','..').split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                     if feature_type == 'CDS':
                         for i in range(1, len(ends)-2, 2):
@@ -1026,7 +1026,7 @@ def parse_embl(embl_data):
                             features.append(intron)
                 else: #a regular location
                     ends = location.split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                 feature = {
                     'type': feature_type,
@@ -1062,7 +1062,7 @@ def parse_embl(embl_data):
                 if location.startswith("complement(join("):#a joined location on the Crick strand
                     genomic_strand = '-'
                     ends = location.split('complement(join(')[1][:-2].replace("join(", "").replace(')','').replace(',','..').split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                     if feature_type == 'CDS':
                         for i in range(1, len(ends)-2, 2):
@@ -1075,7 +1075,7 @@ def parse_embl(embl_data):
                 elif location.startswith("join(complement("):#a joined location on the Crick strand
                     genomic_strand = '-'
                     ends = location.split('join(complement(')[1][:-2].replace("complement(", "").replace(')', '').replace(',','..').split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                     if feature_type == 'CDS':
                         for i in range(1, len(ends)-2, 2):
@@ -1088,20 +1088,20 @@ def parse_embl(embl_data):
                 elif location.startswith("complement(order("):
                     genomic_strand = '-'
                     ends = location.split('complement(order(')[1][:-2].replace(',','..').split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                 elif location.startswith("order("):
                     ends = location.split('order(')[1][:-1].replace(',','..').split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                 elif location.startswith("complement("): #a location on the Crick strand
                     genomic_strand = '-'
                     ends = location.split('complement(')[1][:-1].split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                 elif location.startswith("join("): #a joined location
                     ends = location.split('join(')[1][:-1].replace(',','..').split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
                     if feature_type == 'CDS':
                         for i in range(1, len(ends)-2, 2):
@@ -1113,7 +1113,7 @@ def parse_embl(embl_data):
                             features.append(intron)
                 else: #a regular location
                     ends = location.split('..')
-                    ends = map(lambda end: int(end.replace('>','').replace('<','')), ends)
+                    ends = [int(end.replace('>','').replace('<','')) for end in ends]
                     genomic_positions = [min(ends), max(ends)]
 
                 feature = {
@@ -1157,7 +1157,7 @@ def parse_embl(embl_data):
         dna.organism = organism
 
     for feature in features:
-        if feature.has_key('ncRNA_class'):
+        if 'ncRNA_class' in feature:
             if feature['genomicStrand'] == '+':
                 feature['sequence'] = dna.sequence[feature['genomicPositions'][0]-1:feature['genomicPositions'][-1]]
             else:
@@ -1437,7 +1437,7 @@ def parse_stockholm(stockholm_data):
     for line in lines:
         tokens = re.split('\s+', line)
         if len(line) != 0 and not re.match('^#', line) and len(tokens) == 2:
-            if alignedSequences.has_key(tokens[0]):
+            if tokens[0] in alignedSequences:
                 alignedSequences[tokens[0]] = alignedSequences[tokens[0]]+tokens[1]
             else:
                 alignedSequences[tokens[0]] = tokens[1]
@@ -1482,8 +1482,8 @@ def parse_pdb(pdb_data):
     residues = []
     current_3D = None
     title = "N.A."
-
-    for line in pdb_data.split('\n'):
+    lines = pdb_data.split("\\n")
+    for line in lines:
         header = line[0:6].strip()
         atom_name = line[12:16].strip()
         residue_name = line[17:20].strip().upper()
@@ -1512,10 +1512,13 @@ def parse_pdb(pdb_data):
                     residues.append(current_residue)
                 absolute_position += 1
                 current_3D.numbering_system[str(absolute_position)] = current_residue_pos
-
-            x = float(line[30:38].strip())
-            y = float(line[38:46].strip())
-            z = float(line[46:54].strip())
+            try:
+                x = float(line[30:38].strip())
+                y = float(line[38:46].strip())
+                z = float(line[46:54].strip())
+            except ValueError:
+                split = line.split()
+                x, y, z = float(split[-6]), float(split[-5]), float(split[-4])
             current_3D.add_atom(atom_name, absolute_position, [x,y,z])
 
             if (atom_name == "O4'" or atom_name == "O4*") and not current_molecule in molecules:
@@ -1580,7 +1583,7 @@ def parse_sam(sam_file):
             aligned_read_nb +=1
             for name in sequence_names:
                 if name == sam_file_content.getrname(alignedread.rname):
-                    if tid_dic.has_key(alignedread.rname) == 0:
+                    if not alignedread.rname in tid_dic.has_key:
                         tid_dic[alignedread.rname] = name
 
             c = 0 #counter for the read sequence which is incremented with each M/I/S
@@ -1592,7 +1595,7 @@ def parse_sam(sam_file):
             for tu in alignedread.cigar:
                 if tu[0] == 0: #0=M=alignment Match (match or mismatch)
                     tag = 'yes'
-                    read_pos_list = range(c,c+tu[1],1)
+                    read_pos_list = list(range(c,c+tu[1],1))
                     for p in read_pos_list: #p+1=position on the read sequence
                         r += 1 #position on the reference sequence
                         aligned_seq.append(r)

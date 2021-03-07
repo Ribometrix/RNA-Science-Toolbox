@@ -4,7 +4,7 @@ from pyrna.features import RNA
 from pyrna import parsers, utils
 from pymongo import MongoClient
 import pandas as pd
-import urllib.request
+import urllib.request, urllib.parse
 
 class charnDB:
     """
@@ -60,7 +60,8 @@ class PDB:
         """
         Return the content of a PDB entry as a string
         """
-        response = urllib.request.urlopen("http://www.rcsb.org/pdb/download/downloadFile.do?fileFormat=pdb&compression=NO&structureId=%s"%pdb_id)
+        url = "https://files.rcsb.org/download/{:s}.pdb".format(pdb_id)
+        response = urllib.request.urlopen(url)
         content = str(response.read())
         return content
 
@@ -347,9 +348,9 @@ class NCBI:
         response = None
 
         if len(ids) > 200:
-            response = urllib.request.urlopen("%sefetch.fcgi"%self._eutils_base_url, urllib.urlencode(data))
+            response = urllib.request.urlopen("%sefetch.fcgi"%self._eutils_base_url, urllib.parse.urlencode(data))
         else:
-            response = urllib.request.urlopen("%sefetch.fcgi?%s"%(self._eutils_base_url, urllib.urlencode(data)))
+            response = urllib.request.urlopen("%sefetch.fcgi?%s"%(self._eutils_base_url, urllib.parse.urlencode(data)))
 
         if header:
             content = str(response.read(header))
@@ -381,7 +382,7 @@ class NCBI:
                 'db':db,
                 'id':','.join(ids)
             }
-            data = urllib.urlencode(data)
+            data = urllib.parse.urlencode(data)
             req = urllib.request.Request("%sesummary.fcgi"%self._eutils_base_url, data)
             response = urllib.request.urlopen(req)
             content = str(response.read())
@@ -418,14 +419,16 @@ class RNA3DHub:
         - the list of pdb ids
         """
         rows = []
-        response = urllib.request.urlopen("http://rna.bgsu.edu/rna3dhub/nrlist/download/"+str(self.release)+"/"+str(resolution)+"A/csv")
+        url = "http://rna.bgsu.edu/rna3dhub/nrlist/download/"+str(self.release)+"/"+str(resolution)+"A/csv"
+        response = urllib.request.urlopen(url)
         content = str(response.read())
-        for line in content.split('\n'):
-            if len(line.strip()) > 0:
-                tokens = line.split(',')
-                pdb_ids = ' '.join(tokens[1:])
-                rows.append([re.sub('"', '', tokens[0]), re.sub('"', '', pdb_ids).split(' ')]);
-        return DataFrame(rows, columns=['cluster-id', 'pdb-ids'])
+        lines = content.replace("\"", "").replace("b\'", "").split("\\n")
+        elements = [l.split(",") for l in lines]
+        ids = [ e[0] for e in elements]
+        pdb_ids = [ e[1:] for e in elements]
+        to_ret = DataFrame({'cluster-id': ids,
+                            'pdb-ids': pdb_ids})
+        return to_ret
 
 class Rfam:
 
@@ -600,7 +603,7 @@ class Rfam:
                 rfam_family['ncbi_id'] = tokens[6]
                 rfam_family['ncbi_start'] = tokens[7]
                 rfam_family['ncbi_end'] = tokens[8]
-                if not rfam_families_with_3Ds.has_key(rfam_accession):
+                if rfam_accession not in rfam_families_with_3Ds:
                     rfam_families_with_3Ds[rfam_accession] = []
                 rfam_families_with_3Ds[rfam_accession].append(rfam_family)
         return rfam_families_with_3Ds
