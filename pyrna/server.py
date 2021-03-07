@@ -78,7 +78,7 @@ class UserAccount(tornado.web.RequestHandler):
             self.redirect("/login")
             return
         user = webserver_db['users'].find_one({'login': self.get_secure_cookie("login")})
-        self.render('account.html', hostname = hostname, user = user, tool_name = self.get_argument('tool_name', default = None), tool_id = self.get_argument('tool_id', default = None), tools_online = external_tools_2_websockets.keys())
+        self.render('account.html', hostname = hostname, user = user, tool_name = self.get_argument('tool_name', default = None), tool_id = self.get_argument('tool_id', default = None), tools_online = list(external_tools_2_websockets.keys()))
 
 class RegisterUserAccount(tornado.web.RequestHandler):
     def post(self):
@@ -100,7 +100,7 @@ class SaveProject(tornado.web.RequestHandler):
             project = json.loads(project)
             user = webserver_db['users'].find_one({'external tools linked.id': tool_id})
             if user:
-                if not project.has_key('_id'):
+                if '_id' not in project:
                     project['_id'] = ObjectId()
                     user['projects'].append({
                         'name': project['name'],
@@ -137,10 +137,10 @@ class Logout(UserAccount):
     def get(self):
         user = webserver_db['users'].find_one({'login': self.get_secure_cookie("login")})
         for tool in user['external tools linked']:
-            print (external_tools_2_websockets.has_key(tool['id']))
+            print((tool['id'] in external_tools_2_websockets))
             print (external_tools_2_websockets)
-            print (tool['id'])
-            if external_tools_2_websockets.has_key(tool['id']):
+            print((tool['id']))
+            if tool['id'] in external_tools_2_websockets:
                 message = {}
                 message['header'] = "super"
                 external_tools_2_websockets[tool['id']].write_message(message)
@@ -380,7 +380,7 @@ class Compute2d(tornado.web.RequestHandler):
                             'name': helix['name'],
                             'location': {'ends': helix['location']} if version == 1 else helix['location']
                         }
-                        if helix.has_key('interactions'):
+                        if 'interactions' in helix:
                             interactions_descr = []
                             for interaction in helix['interactions']:
                                 interactions_descr.append({
@@ -470,7 +470,7 @@ class Compute2d(tornado.web.RequestHandler):
                             'name': helix['name'],
                             'location': {'ends': helix['location']} if version == 1 else helix['location']
                         }
-                        if helix.has_key('interactions'):
+                        if 'interactions' in helix:
                             interactions_descr = []
                             for interaction in helix['interactions']:
                                 interactions_descr.append({
@@ -762,7 +762,7 @@ class WebSocket(tornado.websocket.WebSocketHandler):
     def on_close(self):
         if self in websockets:
             websockets.remove(self)
-        for external_tool, ws in external_tools_2_websockets.items():
+        for external_tool, ws in list(external_tools_2_websockets.items()):
             if ws == self:
                 del external_tools_2_websockets[external_tool]
                 break
@@ -836,14 +836,14 @@ if __name__ == '__main__':
         logs_db = mongodb['logs']
         webserver_db = mongodb['webserver']
     except Exception as e:
-        print ('\033[91mI cannot connect any Mongodb instance hosted at %s:%i\033[0m'%(mongodb_host, mongodb_port))
+        print(('\033[91mI cannot connect any Mongodb instance hosted at %s:%i\033[0m'%(mongodb_host, mongodb_port)))
         print ('To modify the parameters for the Mongodb instance, copy and edit the file conf/pyrna.json.')
         sys.exit(-1)
 
     app = Application()
     server = tornado.httpserver.HTTPServer(app)
     server.listen(webserver_port)
-    print ("\033[92mYour webserver is now accessible at http://%s:%i/\033[0m"%(hostname, webserver_port))
+    print(("\033[92mYour webserver is now accessible at http://%s:%i/\033[0m"%(hostname, webserver_port)))
 
     main_loop = tornado.ioloop.IOLoop.instance()
     main_loop.start()

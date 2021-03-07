@@ -109,7 +109,7 @@ def base_pairs_to_secondary_structure(rna, base_pairs):
     helix_end = -1
     helix_length = -1
     base_pairs = base_pairs.sort_values(by='pos1') #the base pairs are sorted according to the first position
-    base_pairs = base_pairs.as_matrix()
+    base_pairs = base_pairs.to_numpy()
     helix_count = 1
 
     next_pos1 = -1
